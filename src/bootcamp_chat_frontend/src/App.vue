@@ -43,6 +43,7 @@ export default {
 		<br />
 		<br />
 		{{ identity?.getPrincipal() }}
+		<button @click="login">Login</button>
 		<div>
 			{{ notes }}
 		</div>
