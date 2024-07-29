@@ -1,28 +1,39 @@
-<script setup>
-import { ref } from 'vue';
-import { bootcamp_chat_backend } from 'declarations/bootcamp_chat_backend/index';
-let greeting = ref('');
-
-async function handleSubmit(e) {
-  e.preventDefault();
-  const target = e.target;
-  const name = target.querySelector('#name').value;
-  await bootcamp_chat_backend.greet(name).then((response) => {
-    greeting.value = response;
-  });
-}
+<script lang="ts">
+import { ref } from "vue";
+import { bootcamp_chat_backend } from "../../declarations/bootcamp_chat_backend/index";
+export default {
+	data() {
+		return {
+			newNote: "",
+			notes: [] as string[],
+		};
+	},
+	methods: {
+		async dodajNotatke() {
+			await bootcamp_chat_backend.add_note(this.newNote);
+			await this.pobierzNotatki();
+		},
+		async pobierzNotatki() {
+			this.notes = await bootcamp_chat_backend.get_notes();
+		},
+	},
+	mounted() {
+		this.pobierzNotatki();
+	},
+};
 </script>
 
 <template>
-  <main>
-    <img src="/logo2.svg" alt="DFINITY logo" />
-    <br />
-    <br />
-    <form action="#" @submit="handleSubmit">
-      <label for="name">Enter your name: &nbsp;</label>
-      <input id="name" alt="Name" type="text" />
-      <button type="submit">Click Me!</button>
-    </form>
-    <section id="greeting">{{ greeting }}</section>
-  </main>
+	<main>
+		<img src="/logo2.svg" alt="DFINITY logo" />
+		<br />
+		<br />
+		<div>
+			{{ notes }}
+		</div>
+		<div>
+			<textarea v-model="newNote"></textarea>
+			<button>Dodaj notatkę</button>
+		</div>
+	</main>
 </template>
