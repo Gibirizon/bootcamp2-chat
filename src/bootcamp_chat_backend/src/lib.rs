@@ -24,6 +24,16 @@ fn register(nick: String) {
 }
 
 #[ic_cdk::query]
+fn get_users() -> HashMap<Principal, UserData> {
+    USERS.with_borrow(|users| users.clone())
+}
+
+#[ic_cdk::query]
+fn get_user(user: Principal) -> Option<UserData> {
+    USERS.with_borrow(|users| users.get(&user).cloned())
+}
+
+#[ic_cdk::query]
 fn get_chat(chat_path: [Principal; 2]) -> Option<Vec<String>> {
     CHAT.with_borrow(|chats| chats.get(&chat_path).cloned())
 }
