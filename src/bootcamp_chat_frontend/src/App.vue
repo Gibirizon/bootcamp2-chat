@@ -5,6 +5,8 @@ import { AuthClient } from "@dfinity/auth-client";
 import { HttpAgent } from "@dfinity/agent";
 import type { Identity } from "@dfinity/agent";
 import { Principal } from "@dfinity/principal";
+import type { Principal as PrincipalType } from "@dfinity/principal";
+import type { UserData } from "../../declarations/bootcamp_chat_backend/bootcamp_chat_backend.did";
 
 export default {
 	data() {
@@ -12,8 +14,11 @@ export default {
 			newChat: "",
 			chats: [] as string[][],
 			identity: undefined as undefined | Identity,
-			principal: undefined as undefined | Principal,
+			principal: undefined as undefined | PrincipalType,
 			targetPrincipal: "",
+			userData: undefined as undefined | UserData,
+			newUsername: "",
+			allUsers: [] as [Principal, UserData][],
 		};
 	},
 	methods: {
@@ -33,7 +38,7 @@ export default {
 			}
 			const targetPrincipal = Principal.fromText(cleanTargetPrincipal);
 			if (!targetPrincipal || targetPrincipal === Principal.anonymous()) {
-				throw new Error("Wrong target");
+				throw new Error("invalid target principal");
 			}
 			return targetPrincipal;
 		},
@@ -64,12 +69,43 @@ export default {
 				identityProvider: "http://be2us-64aaa-aaaaa-qaabq-cai.localhost:4943/",
 				onSuccess: async () => {
 					const identity = authClient.getIdentity();
-					this.principal = identity.getPrincipal();
+					const principal = identity.getPrincipal();
+					this.principal = principal;
 					this.identity = identity;
 					console.log("Zalogowano", this.principal);
-					await this.pobierzChaty();
+					await this.getUserData();
+					await this.getAllUsers();
 				},
 			});
+		},
+		async logout() {
+			const authClient = await AuthClient.create();
+			authClient.logout();
+			this.identity = undefined;
+			this.principal = undefined;
+			this.userData = undefined;
+			this.chats = [];
+		},
+		async registerUsername() {
+			const trimedUsername = this.newUsername.trim();
+			const backend = this.getAuthClient();
+			await backend.register(trimedUsername);
+			await this.getUserData();
+			await this.getAllUsers();
+		},
+		async getUserData() {
+			const { principal } = this.isUserLogged();
+			const maybeUserData = await bootcamp_chat_backend.get_user(principal as Principal);
+			if (maybeUserData.length === 0) {
+				this.userData = undefined;
+			} else {
+				this.userData = maybeUserData[0];
+			}
+			console.log("user data: ", this.userData);
+		},
+		async getAllUsers() {
+			this.allUsers = await bootcamp_chat_backend.get_users();
+			console.log("users: ", this.allUsers);
 		},
 	},
 };
@@ -77,22 +113,31 @@ export default {
 
 <template>
 	<main>
-		<img src="/logo2.svg" alt="DFINITY logo" />
-		<br />
-		<br />
-		{{ principal }} <button @click="login">login</button>
-		<div>
-			<input v-model="targetPrincipal" />
-			<button @click="pobierzChaty">pobierz chat</button>
+		<button v-if="!principal" @click="login">login</button>
+		<button v-if="principal" @click="logout">logout</button>
+		<div v-if="principal && !userData">
+			<input type="text" v-model="newUsername" placeholder="Enter username" />
+			<button @click="registerUsername">Zarejestruj się</button>
 		</div>
-		<div>
-			<div v-for="chat in chats[0]">
-				{{ chat }}
+		<div v-if="principal && userData">
+			{{ userData.nickname }}
+			<div v-if="allUsers">
+				<select v-model="targetPrincipal">
+					<option disabled value="">Please select one</option>
+					<option v-for="[userPrincipal, userData] in allUsers" :value="userPrincipal.toText()">
+						{{ userData.nickname }}
+					</option>
+				</select>
 			</div>
-		</div>
-		<div>
-			<textarea v-model="newChat"></textarea>
-			<button @click="dodajChatMSG">Dodaj notatke</button>
+			<div>
+				<div v-for="chat in chats[0]">
+					{{ chat }}
+				</div>
+			</div>
+			<div>
+				<textarea v-model="newChat" placeholder="Enter message"></textarea>
+				<button @click="dodajChatMSG">Dodaj notatke</button>
+			</div>
 		</div>
 	</main>
 </template>
