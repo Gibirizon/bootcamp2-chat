@@ -1,11 +1,26 @@
+use std::{cell::RefCell, collections::HashMap};
+
 use candid::Principal;
 use ic_cdk::caller;
-use std::cell::RefCell;
-use std::collections::HashMap;
+use user::UserData;
 
+pub mod user;
 thread_local! {
     static CHAT: RefCell<HashMap<[Principal; 2], Vec<String>>> = RefCell::default();
     static USERS: RefCell<HashMap<Principal, UserData>> = RefCell::default();
+}
+
+#[ic_cdk::update]
+fn register(nick: String) {
+    let user = caller();
+
+    if user == Principal::anonymous() {
+        panic!("Anonymous Principal!")
+    }
+
+    USERS.with_borrow_mut(|users| {
+        users.insert(user, UserData::new(nick));
+    })
 }
 
 #[ic_cdk::query]
@@ -18,14 +33,20 @@ fn add_chat_msg(msg: String, user2: Principal) {
     let user1 = caller();
 
     if user1 == Principal::anonymous() {
-        panic!("Anonymous users are not allowed to add notes");
+        panic!("Anonymous Principal!")
     }
 
+    let is_user_registered = USERS.with_borrow(|users| users.contains_key(&user1));
+
+    if !is_user_registered {
+        panic!("User not registered!");
+    }
     let mut principals = [user1, user2];
     principals.sort();
 
     CHAT.with_borrow_mut(|chats| {
         let mut_chat = chats.get_mut(&principals);
+
         if let Some(chat_msgs) = mut_chat {
             chat_msgs.push(msg);
         } else {

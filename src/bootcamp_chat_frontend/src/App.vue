@@ -1,10 +1,11 @@
 <script lang="ts">
 import { ref } from "vue";
-import { bootcamp_chat_backend, canisterId, createActor } from "../../declarations/bootcamp_chat_backend/index";
+import { bootcamp_chat_backend, canisterId, createActor } from "../../declarations/bootcamp_chat_backend";
 import { AuthClient } from "@dfinity/auth-client";
 import { HttpAgent } from "@dfinity/agent";
 import type { Identity } from "@dfinity/agent";
 import { Principal } from "@dfinity/principal";
+
 export default {
 	data() {
 		return {
@@ -12,32 +13,32 @@ export default {
 			chats: [] as string[][],
 			identity: undefined as undefined | Identity,
 			principal: undefined as undefined | Principal,
-			targetPricnipal: "",
+			targetPrincipal: "",
 		};
 	},
 	methods: {
-		isUserLoggedIn() {
+		isUserLogged() {
 			if (!this.identity || !this.principal || this.principal === Principal.anonymous()) {
-				throw new Error("Plz log in");
+				throw new Error("You are not logged in");
 			}
 			return {
 				identity: this.identity,
 				principal: this.principal,
 			};
 		},
-		validateTargetPricnipal() {
-			const cleanTargetPrincipal = this.targetPricnipal.trim();
+		validateTargetPrincipal() {
+			const cleanTargetPrincipal = this.targetPrincipal.trim();
 			if (cleanTargetPrincipal === "") {
-				throw new Error("Empty target principal");
+				throw new Error("No principal");
 			}
-			const targetPricnipal = Principal.fromText(cleanTargetPrincipal);
-			if (!targetPricnipal || targetPricnipal === Principal.anonymous()) {
-				throw new Error("Invalid target principal");
+			const targetPrincipal = Principal.fromText(cleanTargetPrincipal);
+			if (!targetPrincipal || targetPrincipal === Principal.anonymous()) {
+				throw new Error("Wrong target");
 			}
-			return targetPricnipal;
+			return targetPrincipal;
 		},
 		getAuthClient() {
-			this.isUserLoggedIn();
+			this.isUserLogged();
 			return createActor(canisterId, {
 				agentOptions: {
 					identity: this.identity,
@@ -45,20 +46,17 @@ export default {
 			});
 		},
 		async dodajChatMSG() {
-			const targetPricnipal = this.validateTargetPricnipal();
-
+			const targetPrincipal = this.validateTargetPrincipal();
 			const backend = this.getAuthClient();
-			await backend.add_chat_msg(this.newChat, targetPricnipal);
+			await backend.add_chat_msg(this.newChat, targetPrincipal);
 			await this.pobierzChaty();
 		},
 		async pobierzChaty() {
-			console.log("pobieram chaty");
-			const { identity, principal } = this.isUserLoggedIn();
-			const targetPricnipal = this.validateTargetPricnipal();
+			const { identity, principal } = this.isUserLogged();
+			const targetPrincipal = this.validateTargetPrincipal();
 
-			const chatPath = [targetPricnipal, identity.getPrincipal()].sort();
+			const chatPath = [targetPrincipal, identity.getPrincipal()].sort();
 			this.chats = await bootcamp_chat_backend.get_chat(chatPath);
-			console.log("chats: ", this.chats);
 		},
 		async login() {
 			const authClient = await AuthClient.create();
@@ -68,7 +66,7 @@ export default {
 					const identity = authClient.getIdentity();
 					this.principal = identity.getPrincipal();
 					this.identity = identity;
-					console.log("Zalogowano: ", this.principal);
+					console.log("Zalogowano", this.principal);
 					await this.pobierzChaty();
 				},
 			});
@@ -82,19 +80,19 @@ export default {
 		<img src="/logo2.svg" alt="DFINITY logo" />
 		<br />
 		<br />
-		{{ principal }} <button @click="login">Login</button>
+		{{ principal }} <button @click="login">login</button>
 		<div>
-			<input type="text" v-model="targetPricnipal" />
-			<button @click="pobierzChaty">pobierz chaty</button>
+			<input v-model="targetPrincipal" />
+			<button @click="pobierzChaty">pobierz chat</button>
 		</div>
-		<div v-for="chat in chats[0]">
-			{{ chat }}
+		<div>
+			<div v-for="chat in chats[0]">
+				{{ chat }}
+			</div>
 		</div>
 		<div>
 			<textarea v-model="newChat"></textarea>
-			<button @click="dodajChatMSG">Dodaj wiadomość</button>
+			<button @click="dodajChatMSG">Dodaj notatke</button>
 		</div>
 	</main>
 </template>
-4pkhg-of7q7-ha36i-i66os-n3chk-ggllo-mobmj-xordn-dwbs7-sqnbs-uae
-bvcbd-nqpjj-cs5ol-b4ubk-36joe-hlitl-4suhj-w7k6x-uwmkc-2mj5m-sqe
